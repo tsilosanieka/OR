@@ -1,0 +1,485 @@
+<html>
+<head>
+<title>Lab3_MatrixForm_Duality.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+.s6 { color: #5f826b; font-style: italic;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+Lab3_MatrixForm_Duality.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% md 
+# Lab 3 - The Matrix Form and The Duality Theory <hr class="ls0">#%% md 
+&lt;b&gt;Information on group members:&lt;/b&gt;&lt;br&gt; 
+1) ER-2028, Eka Tsilosani &lt;br&gt; 
+2) er-2067, Temur Tsomaia <hr class="ls0">#%% 
+</span><span class="s1">from </span><span class="s0">pulp </span><span class="s1">import </span><span class="s2">*  </span>
+<span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">pandas </span><span class="s1">as </span><span class="s0">pd</span>
+<span class="s1">import </span><span class="s0">itertools</span>
+<span class="s1">from </span><span class="s0">IPython</span><span class="s2">.</span><span class="s0">display </span><span class="s1">import </span><span class="s0">display</span><hr class="ls0"><span class="s0">#%% md 
+# 1) The Matrix Form - Fundamental Insight (finish this part to get 3.0) <hr class="ls0">#%% md 
+1.1) Given is the below (primal) linear problem: <hr class="ls0">#%% md 
+primal problem:&lt;br&gt; 
+MAXIMIZE&lt;br&gt; 
+4*x1 + 2*x2 + 3*x3 &lt;br&gt; 
+ 
+SUBJECT TO&lt;br&gt; 
+1_constraint: x1 + x2 &lt;= 10&lt;br&gt; 
+2_constraint: 2*x2 + x3 &lt;= 12&lt;br&gt; 
+3_constraint: 3*x1 + 2*x3 &lt;= 15&lt;br&gt; 
+4_constraint: x1 + x2 + x3 &lt;= 20&lt;br&gt; 
+ 
+VARIABLES&lt;br&gt; 
+x1 Continuous&lt;br&gt; 
+x2 Continuous&lt;br&gt; 
+x3 Continuous&lt;br&gt; <hr class="ls0">#%% md 
+1.2) Use the PuLP library to solve the above problem. Identify the optimal solution: the values for basic variables and the corresponding value for the objective function. <hr class="ls0">#%% 
+</span><span class="s3">### 1. Initialize the Model</span>
+<span class="s3">#we want to find the maximum value for our objective function</span>
+<span class="s0">model_p </span><span class="s2">= </span><span class="s0">LpProblem</span><span class="s2">(</span><span class="s0">name</span><span class="s2">=</span><span class="s4">&quot;Primal-Problem&quot;</span><span class="s2">, </span><span class="s0">sense</span><span class="s2">=</span><span class="s0">LpMaximize</span><span class="s2">)</span>
+
+<span class="s3">### 2. Define Decision Variables</span>
+<span class="s3"># We define the variables x1, x2, x3</span>
+<span class="s3"># 'lowBound=0' sets the constraint x &gt;= 0 for each variable</span>
+<span class="s3"># 'cat='Continuous' means the variables can be any real number</span>
+<span class="s0">x1 </span><span class="s2">= </span><span class="s0">LpVariable</span><span class="s2">(</span><span class="s0">name</span><span class="s2">=</span><span class="s4">&quot;x1&quot;</span><span class="s2">, </span><span class="s0">lowBound</span><span class="s2">=</span><span class="s5">0</span><span class="s2">, </span><span class="s0">cat</span><span class="s2">=</span><span class="s4">'Continuous'</span><span class="s2">)</span>
+<span class="s0">x2 </span><span class="s2">= </span><span class="s0">LpVariable</span><span class="s2">(</span><span class="s0">name</span><span class="s2">=</span><span class="s4">&quot;x2&quot;</span><span class="s2">, </span><span class="s0">lowBound</span><span class="s2">=</span><span class="s5">0</span><span class="s2">, </span><span class="s0">cat</span><span class="s2">=</span><span class="s4">'Continuous'</span><span class="s2">)</span>
+<span class="s0">x3 </span><span class="s2">= </span><span class="s0">LpVariable</span><span class="s2">(</span><span class="s0">name</span><span class="s2">=</span><span class="s4">&quot;x3&quot;</span><span class="s2">, </span><span class="s0">lowBound</span><span class="s2">=</span><span class="s5">0</span><span class="s2">, </span><span class="s0">cat</span><span class="s2">=</span><span class="s4">'Continuous'</span><span class="s2">)</span>
+
+<span class="s3">### 3. Define the Objective Function</span>
+<span class="s3"># This is the function 'Z' that we want to maximize</span>
+<span class="s3"># 'model_p += ...' adds this expression to our model</span>
+<span class="s0">model_p </span><span class="s2">+= </span><span class="s5">4</span><span class="s2">*</span><span class="s0">x1 </span><span class="s2">+ </span><span class="s5">2</span><span class="s2">*</span><span class="s0">x2 </span><span class="s2">+ </span><span class="s5">3</span><span class="s2">*</span><span class="s0">x3</span><span class="s2">, </span><span class="s4">&quot;Z&quot;</span>
+
+<span class="s3">### 4. Define the Constraints</span>
+<span class="s3"># These are the four '&lt;=' limitations</span>
+<span class="s0">model_p </span><span class="s2">+= (</span><span class="s0">x1 </span><span class="s2">+ </span><span class="s0">x2 </span><span class="s2">&lt;= </span><span class="s5">10</span><span class="s2">, </span><span class="s4">&quot;1_constraint&quot;</span><span class="s2">)</span>
+<span class="s0">model_p </span><span class="s2">+= (</span><span class="s5">2</span><span class="s2">*</span><span class="s0">x2 </span><span class="s2">+ </span><span class="s0">x3 </span><span class="s2">&lt;= </span><span class="s5">12</span><span class="s2">, </span><span class="s4">&quot;2_constraint&quot;</span><span class="s2">)</span>
+<span class="s0">model_p </span><span class="s2">+= (</span><span class="s5">3</span><span class="s2">*</span><span class="s0">x1 </span><span class="s2">+ </span><span class="s5">2</span><span class="s2">*</span><span class="s0">x3 </span><span class="s2">&lt;= </span><span class="s5">15</span><span class="s2">, </span><span class="s4">&quot;3_constraint&quot;</span><span class="s2">)</span>
+<span class="s0">model_p </span><span class="s2">+= (</span><span class="s0">x1 </span><span class="s2">+ </span><span class="s0">x2 </span><span class="s2">+ </span><span class="s0">x3 </span><span class="s2">&lt;= </span><span class="s5">20</span><span class="s2">, </span><span class="s4">&quot;4_constraint&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3">### 5. Solve the Problem</span>
+
+<span class="s3"># This command runs the solver to find the optimal solution</span>
+<span class="s0">status </span><span class="s2">= </span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">solve</span><span class="s2">()</span>
+
+<span class="s3">### 6. Print the Results</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;--- PuLP Solution (Primal) ---&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Status: </span><span class="s1">{</span><span class="s0">LpStatus</span><span class="s2">[</span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">status</span><span class="s2">]</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">) </span><span class="s3"># Prints 'Optimal' if a solution was found</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Optimal Z = </span><span class="s1">{</span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">objective</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">) </span><span class="s3"># Prints the final max value for Z</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n</span><span class="s4">--- Optimal Solution Analysis (Task 1.2) ---&quot;</span><span class="s2">)</span>
+
+<span class="s3">### 7. Print Decision Variable Values</span>
+<span class="s3"># This shows the optimal values for x1, x2, and x3</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;Decision Variables (x_i):&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">var </span><span class="s1">in </span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">variables</span><span class="s2">():</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  </span><span class="s1">{</span><span class="s0">var</span><span class="s2">.</span><span class="s0">name</span><span class="s1">} </span><span class="s4">= </span><span class="s1">{</span><span class="s0">var</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+<span class="s3">### 8. Print Slack Variable Values</span>
+<span class="s3"># 'Slack' is the unused amount for a '&lt;=' constraint (s_i = RHS - LHS)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n</span><span class="s4">Slack Variables (s_i):&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">name</span><span class="s2">, </span><span class="s0">constraint </span><span class="s1">in </span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">constraints</span><span class="s2">.</span><span class="s0">items</span><span class="s2">():</span>
+    <span class="s3"># We use 's' + the constraint number (e.g., s1, s2) for clarity</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Slack s</span><span class="s1">{</span><span class="s0">name</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">} </span><span class="s4">= </span><span class="s1">{</span><span class="s0">constraint</span><span class="s2">.</span><span class="s0">slack</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+<span class="s3">### 9. Identify Basic Variables</span>
+<span class="s3"># all variables that are NOT zero in the optimal solution</span>
+<span class="s3"># The number of basic variables must equal the number of constraints (4 in this problem).</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">\n</span><span class="s4">Basic Variables (The </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">constraints</span><span class="s2">)</span><span class="s1">} </span><span class="s4">non-zero variables):&quot;</span><span class="s2">)</span>
+
+<span class="s3"># A small number to check if a value is &quot;close enough&quot; to zero</span>
+<span class="s0">tolerance </span><span class="s2">= </span><span class="s5">1e-6</span>
+
+<span class="s3"># Check decision variables (x1, x2, x3)</span>
+<span class="s1">for </span><span class="s0">var </span><span class="s1">in </span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">variables</span><span class="s2">():</span>
+    <span class="s1">if </span><span class="s0">abs</span><span class="s2">(</span><span class="s0">var</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()) &gt; </span><span class="s0">tolerance</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  </span><span class="s1">{</span><span class="s0">var</span><span class="s2">.</span><span class="s0">name</span><span class="s1">} </span><span class="s4">= </span><span class="s1">{</span><span class="s0">var</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">} </span><span class="s4">(Basic)&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Check slack variables (s1, s2, s3, s4)</span>
+<span class="s1">for </span><span class="s0">name</span><span class="s2">, </span><span class="s0">constraint </span><span class="s1">in </span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">constraints</span><span class="s2">.</span><span class="s0">items</span><span class="s2">():</span>
+    <span class="s1">if </span><span class="s0">abs</span><span class="s2">(</span><span class="s0">constraint</span><span class="s2">.</span><span class="s0">slack</span><span class="s2">) &gt; </span><span class="s0">tolerance</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Slack s</span><span class="s1">{</span><span class="s0">name</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">} </span><span class="s4">= </span><span class="s1">{</span><span class="s0">constraint</span><span class="s2">.</span><span class="s0">slack</span><span class="s1">} </span><span class="s4">(Basic)&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+1.3) In this exercise, you are asked to identify ALL basic (feasible and not) solutions to the above problem. We will do this naively. Specifically, you are asked to use the fundamental insight to build a final simplex tableau for each possible base. Therefore, you need first to initialize the data: c, b, A matrixes, and it is suggested to initialize the auxiliary matrix M defined as M = A + (concatenate) I (identity matrix). Note that the problem should be formulated in the augmented form. Then, you have to iterate over each possible base B, compute B-1, and other relevant parts for the simplex tableau.&lt;br&gt;&lt;br&gt; 
+a) Identify the optimal solution using the optimality condition; print it (Z value and values for basic variables); compare thus derived solution with the optimum found using the PuLP library (obviously, both solutions should be the same). &lt;br&gt; 
+b) Count the number of feasible and infeasible solutions. How many (all) basic solutions to the problem can be identified? &lt;br&gt;&lt;br&gt; 
+It is suggested to use the NumPy library for performing matrix operations.  <hr class="ls0">#%% 
+</span><span class="s3">### preparing all the matrices needed for Task 1.3</span>
+
+<span class="s3"># (c_full): Objective function coefficients for ALL 7 variables (x1, x2, x3, s1, s2, s3, s4)</span>
+<span class="s3"># The coefficients for slack variables (s1-s4) are 0</span>
+<span class="s0">c_full </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">([</span><span class="s5">4</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">])</span>
+
+<span class="s3"># (b): Right-hand side (RHS) vector</span>
+<span class="s3"># These are the constant values from the constraints</span>
+<span class="s0">b </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">([</span><span class="s5">10</span><span class="s2">, </span><span class="s5">12</span><span class="s2">, </span><span class="s5">15</span><span class="s2">, </span><span class="s5">20</span><span class="s2">])</span>
+
+<span class="s3"># (A_dec): 'A' matrix for Decision variables only (x1, x2, x3)</span>
+<span class="s3"># This is the 4x3 matrix from the problem definition</span>
+<span class="s0">A_dec </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">([</span>
+    <span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">, </span><span class="s5">0</span><span class="s2">],  </span><span class="s3"># Row for 1_constraint</span>
+    <span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">1</span><span class="s2">],  </span><span class="s3"># Row for 2_constraint</span>
+    <span class="s2">[</span><span class="s5">3</span><span class="s2">, </span><span class="s5">0</span><span class="s2">, </span><span class="s5">2</span><span class="s2">],  </span><span class="s3"># Row for 3_constraint</span>
+    <span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">]   </span><span class="s3"># Row for 4_constraint</span>
+<span class="s2">])</span>
+
+<span class="s3"># (M): This is the main 4x7 Augmented Matrix [A|I]</span>
+<span class="s3"># It contains the coefficients for ALL 7 variables</span>
+
+<span class="s3"># (I_4): Create a 4x4 Identity matrix</span>
+<span class="s3"># This represents the coefficients for the 4 slack variables (s1, s2, s3, s4)</span>
+<span class="s0">I_4 </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">identity</span><span class="s2">(</span><span class="s5">4</span><span class="s2">)</span>
+
+<span class="s3"># Use numpy.concatenate to join A_dec and I_4 horizontally (axis=1)</span>
+<span class="s3"># This creates the final M = [A|I] matrix</span>
+<span class="s0">M </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">concatenate</span><span class="s2">((</span><span class="s0">A_dec</span><span class="s2">, </span><span class="s0">I_4</span><span class="s2">), </span><span class="s0">axis</span><span class="s2">=</span><span class="s5">1</span><span class="s2">)</span>
+
+<span class="s3"># (c_dec): This is just the coefficient part for the original decision variables (need for future)</span>
+<span class="s0">c_dec </span><span class="s2">= </span><span class="s0">c_full</span><span class="s2">[:</span><span class="s5">3</span><span class="s2">]</span>
+
+<span class="s3"># Print the resulting M matrix to check if it's correct</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;M (Augmented Coefficient Matrix):</span><span class="s1">\n</span><span class="s4">&quot;</span><span class="s2">, </span><span class="s0">M</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+&lt;b&gt; Important note: the below is just a proposition. You can solve the problem in your own way. &lt;/b&gt; 
+ 
+You can define an auxiliary method constructing a final simplex tableau for a given base.  Here, &quot;base&quot; is a list of columns (integers) for the base. Note that the functions in python can return multiple objects and you can use this functionality to return&lt;br&gt; 
+- the inversed base&lt;br&gt; 
+- coefficients in the row 0 for slack variables&lt;br&gt; 
+- right side values (except the objective function value)&lt;br&gt; 
+- the objective function value&lt;br&gt; 
+- the coefficients for decision variables in row 0 &lt;br&gt; 
+- the coefficients for decision variables in rows 1+&lt;br&gt; 
+ 
+Note that if BI cannot be built (it is possible), the method may return None in order to notify the executive method about this exception.  
+ 
+ <hr class="ls0">#%% 
+</span><span class="s1">def </span><span class="s0">getFinalTableau</span><span class="s2">(</span><span class="s0">base_indices</span><span class="s2">, </span><span class="s0">c_full</span><span class="s2">, </span><span class="s0">b</span><span class="s2">, </span><span class="s0">M</span><span class="s2">, </span><span class="s0">A_dec</span><span class="s2">, </span><span class="s0">c_dec</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Constructs the final simplex tableau for a given base using Fundamental Insight. 
+    Returns: 
+    - solution_full: 7-element array of all variable values 
+    - Z: The objective function value 
+    - row_0_non_basic: The Row 0 coefficients for non-basic variables 
+    - x_B_values: The values of the basic variables (for feasibility check) 
+    - y_values: The values of the dual variables 
+    - z_values: The values of the dual surplus variables 
+    &quot;&quot;&quot;</span>
+
+    <span class="s3"># Convert the tuple of indices (from itertools) to a list</span>
+    <span class="s0">base_indices_list </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">base_indices</span><span class="s2">)</span>
+
+    <span class="s1">try</span><span class="s2">:</span>
+        <span class="s3"># 1. Create the Basis Matrix 'B'</span>
+        <span class="s3"># Select only the columns from M that are in our current base</span>
+        <span class="s0">B </span><span class="s2">= </span><span class="s0">M</span><span class="s2">[:, </span><span class="s0">base_indices_list</span><span class="s2">]</span>
+
+        <span class="s3"># 2. Calculate B inverse (B_inv)</span>
+        <span class="s3"># This is the core calculation for the simplex method</span>
+        <span class="s0">B_inv </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">linalg</span><span class="s2">.</span><span class="s0">inv</span><span class="s2">(</span><span class="s0">B</span><span class="s2">)</span>
+
+    <span class="s1">except </span><span class="s0">np</span><span class="s2">.</span><span class="s0">linalg</span><span class="s2">.</span><span class="s0">LinAlgError</span><span class="s2">:</span>
+        <span class="s3"># If the matrix B has no inverse (it's &quot;singular&quot;)</span>
+        <span class="s3"># it's not a valid basis. We return None to skip it</span>
+        <span class="s1">return None</span>
+
+    <span class="s3"># 3. Get 'c_B' - the objective coefficients for basic variables</span>
+    <span class="s0">c_B </span><span class="s2">= </span><span class="s0">c_full</span><span class="s2">[</span><span class="s0">base_indices_list</span><span class="s2">]</span>
+
+
+    <span class="s3"># Using Fundamental Insight Formulas</span>
+
+    <span class="s3"># 4. Calculate Primal Solution (RHS): x_B = B_inv * b</span>
+    <span class="s3"># These are the values of the basic variables</span>
+    <span class="s0">x_B_values </span><span class="s2">= </span><span class="s0">B_inv </span><span class="s2">@ </span><span class="s0">b</span>
+
+    <span class="s3"># 5. Calculate Objective Value: Z = c_B * x_B</span>
+    <span class="s0">Z </span><span class="s2">= </span><span class="s0">c_B </span><span class="s2">@ </span><span class="s0">x_B_values</span>
+
+    <span class="s3"># 6. Calculate Dual Solution: y = c_B * B_inv</span>
+    <span class="s3"># These are the Row 0 coeffs for SLACK variables</span>
+    <span class="s0">y_values </span><span class="s2">= </span><span class="s0">c_B </span><span class="s2">@ </span><span class="s0">B_inv</span>
+
+    <span class="s3"># 7. Calculate Dual Surplus: z = y * A_dec - c_dec</span>
+    <span class="s3"># These are the Row 0 coeffs for DECISION variables</span>
+    <span class="s0">z_values </span><span class="s2">= (</span><span class="s0">y_values </span><span class="s2">@ </span><span class="s0">A_dec</span><span class="s2">) - </span><span class="s0">c_dec</span>
+
+    <span class="s3"># 8. Calculate ALL Row 0 coefficients for non-basic variables</span>
+    <span class="s3"># This is the general formula: (c_B * B_inv * N) - c_N</span>
+    <span class="s3"># It checks for optimality</span>
+    <span class="s0">all_vars_indices </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s5">7</span><span class="s2">)) </span><span class="s3"># All indices [0...6]</span>
+    <span class="s3"># Find indices that are NOT in the base</span>
+    <span class="s0">non_basic_indices </span><span class="s2">= [</span><span class="s0">idx </span><span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">all_vars_indices </span><span class="s1">if </span><span class="s0">idx </span><span class="s1">not in </span><span class="s0">base_indices_list</span><span class="s2">]</span>
+    <span class="s0">M_N </span><span class="s2">= </span><span class="s0">M</span><span class="s2">[:, </span><span class="s0">non_basic_indices</span><span class="s2">]  </span><span class="s3"># Get Non-basic columns</span>
+    <span class="s0">c_N </span><span class="s2">= </span><span class="s0">c_full</span><span class="s2">[</span><span class="s0">non_basic_indices</span><span class="s2">] </span><span class="s3"># Get Non-basic coefficients</span>
+    <span class="s0">row_0_non_basic </span><span class="s2">= (</span><span class="s0">c_B </span><span class="s2">@ </span><span class="s0">B_inv </span><span class="s2">@ </span><span class="s0">M_N</span><span class="s2">) - </span><span class="s0">c_N </span><span class="s3"># The formula</span>
+
+    <span class="s3"># 9. Create the full 7-element solution vector</span>
+    <span class="s0">solution_full </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">zeros</span><span class="s2">(</span><span class="s5">7</span><span class="s2">) </span><span class="s3"># Start with all zeros</span>
+    <span class="s3"># Fill in the calculated values for the basic variables</span>
+    <span class="s0">solution_full</span><span class="s2">[</span><span class="s0">base_indices_list</span><span class="s2">] = </span><span class="s0">x_B_values</span>
+
+    <span class="s3"># Return all calculated parts</span>
+    <span class="s1">return </span><span class="s2">(</span><span class="s0">solution_full</span><span class="s2">, </span><span class="s0">Z</span><span class="s2">, </span><span class="s0">row_0_non_basic</span><span class="s2">, </span><span class="s0">x_B_values</span><span class="s2">, </span><span class="s0">y_values</span><span class="s2">, </span><span class="s0">z_values</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Create a list of all variable indices [0, 1, 2, 3, 4, 5, 6]</span>
+<span class="s0">var_indices </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s5">7</span><span class="s2">))</span>
+<span class="s3"># Create a matching list of names for printing</span>
+<span class="s0">variable_names </span><span class="s2">= [</span><span class="s4">'x1'</span><span class="s2">, </span><span class="s4">'x2'</span><span class="s2">, </span><span class="s4">'x3'</span><span class="s2">, </span><span class="s4">'s1'</span><span class="s2">, </span><span class="s4">'s2'</span><span class="s2">, </span><span class="s4">'s3'</span><span class="s2">, </span><span class="s4">'s4'</span><span class="s2">]</span>
+
+<span class="s3"># Find all possible combinations of 4 basic variables from 7 total</span>
+<span class="s3"># This is n_choose_k or 7-choose-4 = 35</span>
+<span class="s0">all_bases </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">itertools</span><span class="s2">.</span><span class="s0">combinations</span><span class="s2">(</span><span class="s0">var_indices</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+
+<span class="s3">#Initialize counters and trackers</span>
+<span class="s0">feasible_count </span><span class="s2">= </span><span class="s5">0</span>
+<span class="s0">infeasible_count </span><span class="s2">= </span><span class="s5">0</span>
+<span class="s0">optimal_solution_found </span><span class="s2">= </span><span class="s1">None</span>
+<span class="s0">optimal_Z </span><span class="s2">= -</span><span class="s0">np</span><span class="s2">.</span><span class="s0">inf </span><span class="s3"># Start with negative infinity, since we want to MAXIMIZE</span>
+<span class="s0">tol </span><span class="s2">= </span><span class="s5">1e-9 </span><span class="s3"># Tolerance for checking if a number is zero</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Testing </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">all_bases</span><span class="s2">)</span><span class="s1">} </span><span class="s4">possible basic solutions...</span><span class="s1">\n</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+<span class="s3">#Loop through every possible base</span>
+<span class="s1">for </span><span class="s0">base </span><span class="s1">in </span><span class="s0">all_bases</span><span class="s2">:</span>
+    <span class="s3"># Try to get the tableau calculations for this base</span>
+    <span class="s0">result </span><span class="s2">= </span><span class="s0">getFinalTableau</span><span class="s2">(</span><span class="s0">base</span><span class="s2">, </span><span class="s0">c_full</span><span class="s2">, </span><span class="s0">b</span><span class="s2">, </span><span class="s0">M</span><span class="s2">, </span><span class="s0">A_dec</span><span class="s2">, </span><span class="s0">c_dec</span><span class="s2">)</span>
+
+    <span class="s1">if </span><span class="s0">result </span><span class="s1">is None</span><span class="s2">:</span>
+        <span class="s3"># Matrix was singular (invalid base), skip it</span>
+        <span class="s1">continue</span>
+
+    <span class="s3"># Unpack the results from the function</span>
+    <span class="s0">solution</span><span class="s2">, </span><span class="s0">Z</span><span class="s2">, </span><span class="s0">row_0_non_basic</span><span class="s2">, </span><span class="s0">x_B</span><span class="s2">, </span><span class="s0">_</span><span class="s2">, </span><span class="s0">_ </span><span class="s2">= </span><span class="s0">result</span>
+
+    <span class="s3">#FEASIBILITY CHECK</span>
+    <span class="s3"># Is the solution feasible? Are all x_B values non-negative (&gt;= 0)?</span>
+    <span class="s0">is_feasible </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">all</span><span class="s2">(</span><span class="s0">x_B </span><span class="s2">&gt;= -</span><span class="s0">tol</span><span class="s2">) </span><span class="s3"># Use tolerance for 0 check</span>
+
+    <span class="s1">if </span><span class="s0">is_feasible</span><span class="s2">:</span>
+        <span class="s0">feasible_count </span><span class="s2">+= </span><span class="s5">1</span>
+
+        <span class="s3">#OPTIMALITY CHECK</span>
+        <span class="s3"># If it's feasible, is it also optimal?</span>
+        <span class="s3"># Are all Row 0 coefficients (for non-basics) non-negative (&gt;= 0)?</span>
+        <span class="s0">is_optimal </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">all</span><span class="s2">(</span><span class="s0">row_0_non_basic </span><span class="s2">&gt;= -</span><span class="s0">tol</span><span class="s2">) </span><span class="s3"># Use tolerance</span>
+
+        <span class="s1">if </span><span class="s0">is_optimal</span><span class="s2">:</span>
+            <span class="s3"># This is a feasible AND optimal solution</span>
+            <span class="s3"># Check if this optimal solution is better than the one we already found</span>
+            <span class="s1">if </span><span class="s0">Z </span><span class="s2">&gt; </span><span class="s0">optimal_Z</span><span class="s2">:</span>
+                <span class="s0">optimal_Z </span><span class="s2">= </span><span class="s0">Z</span>
+                <span class="s0">optimal_solution_found </span><span class="s2">= (</span><span class="s0">solution</span><span class="s2">, </span><span class="s0">Z</span><span class="s2">, </span><span class="s0">row_0_non_basic</span><span class="s2">, </span><span class="s0">base</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s3"># Solution was not feasible</span>
+        <span class="s0">infeasible_count </span><span class="s2">+= </span><span class="s5">1</span>
+
+<span class="s3"># Print the final optimal solution</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot; a) Optimal Solution from Fundamental Insight&quot;</span><span class="s2">)</span>
+<span class="s1">if </span><span class="s0">optimal_solution_found</span><span class="s2">:</span>
+    <span class="s0">solution</span><span class="s2">, </span><span class="s0">Z</span><span class="s2">, </span><span class="s0">row_0</span><span class="s2">, </span><span class="s0">base_indices </span><span class="s2">= </span><span class="s0">optimal_solution_found</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Optimal Z = </span><span class="s1">{</span><span class="s0">Z</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">} </span><span class="s4">(Found value: 220/7)&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Found with Base: </span><span class="s1">{</span><span class="s2">[</span><span class="s0">variable_names</span><span class="s2">[</span><span class="s0">i</span><span class="s2">] </span><span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">base_indices</span><span class="s2">]</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n</span><span class="s4">Basic Variables:&quot;</span><span class="s2">)</span>
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">base_indices</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  </span><span class="s1">{</span><span class="s0">variable_names</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span><span class="s1">} </span><span class="s4">= </span><span class="s1">{</span><span class="s0">solution</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n</span><span class="s4">Comparison with PuLP:&quot;</span><span class="s2">)</span>
+    <span class="s3"># model_p is the PuLP model from Task 1.2</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Matrix Method Z: </span><span class="s1">{</span><span class="s0">Z</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">, PuLP Z: </span><span class="s1">{</span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">objective</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;  The solutions match!&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;No optimal solution found&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Print the solution counts</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n </span><span class="s4">b) Solution Counts&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Total Basic Solutions: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">all_bases</span><span class="s2">)</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Feasible Solutions: </span><span class="s1">{</span><span class="s0">feasible_count</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Infeasible Solutions: </span><span class="s1">{</span><span class="s0">infeasible_count</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  (Note: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">all_bases</span><span class="s2">) - </span><span class="s0">feasible_count </span><span class="s2">- </span><span class="s0">infeasible_count</span><span class="s1">} </span><span class="s4">bases were invalid/singular)&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+## 2) The Duality Theory (finish this part + part 1 + to get 5.0) <hr class="ls0">#%% md 
+2.1) Model the dual problem to the above solved primal one, using the PuLP library. Then, solve it and compare the derived optimum with the optimum for the primal problem. Are they equal? <hr class="ls0">#%% 
+</span><span class="s3"># 1. Initialize the Dual Model</span>
+<span class="s3"># 'sense=LpMinimize' is used because the Primal was 'LpMaximize'</span>
+<span class="s0">model_d </span><span class="s2">= </span><span class="s0">LpProblem</span><span class="s2">(</span><span class="s0">name</span><span class="s2">=</span><span class="s4">&quot;Dual-Problem&quot;</span><span class="s2">, </span><span class="s0">sense</span><span class="s2">=</span><span class="s0">LpMinimize</span><span class="s2">)</span>
+
+<span class="s3"># 2. Define Decision Variables</span>
+<span class="s3"># We have 4 dual variables (y1, y2, y3, y4) because the Primal had 4 constraints</span>
+<span class="s3"># We use .dicts to create y_1, y_2, y_3, y_4 (PuLP is 1-indexed here by 'range(1,5)')</span>
+<span class="s0">y_vars </span><span class="s2">= </span><span class="s0">LpVariable</span><span class="s2">.</span><span class="s0">dicts</span><span class="s2">(</span><span class="s4">&quot;y&quot;</span><span class="s2">, </span><span class="s0">range</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">5</span><span class="s2">), </span><span class="s0">lowBound</span><span class="s2">=</span><span class="s5">0</span><span class="s2">, </span><span class="s0">cat</span><span class="s2">=</span><span class="s4">'Continuous'</span><span class="s2">)</span>
+
+<span class="s3"># 3. Define the Dual Objective Function</span>
+<span class="s3"># The coefficients are the RHS (b-vector) from the Primal problem: [10, 12, 15, 20]</span>
+<span class="s0">model_d </span><span class="s2">+= </span><span class="s5">10</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">1</span><span class="s2">] + </span><span class="s5">12</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">2</span><span class="s2">] + </span><span class="s5">15</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">3</span><span class="s2">] + </span><span class="s5">20</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">4</span><span class="s2">], </span><span class="s4">&quot;W&quot;</span>
+
+<span class="s3"># 4. Define the Dual Constraints</span>
+<span class="s3"># The constraints are the transpose of the Primal 'A' matrix</span>
+<span class="s3"># The RHS is the objective coefficients 'c' from the Primal problem: [4, 2, 3]</span>
+
+<span class="s3"># Constraint for Primal x1: (column 1 of A) -&gt; (row 1 of A^T)</span>
+<span class="s0">model_d </span><span class="s2">+= (</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">1</span><span class="s2">] + </span><span class="s5">3</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">3</span><span class="s2">] + </span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">4</span><span class="s2">] &gt;= </span><span class="s5">4</span><span class="s2">, </span><span class="s4">&quot;dual_c1_for_x1&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Constraint for Primal x2: (column 2 of A) -&gt; (row 2 of A^T)</span>
+<span class="s0">model_d </span><span class="s2">+= (</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">1</span><span class="s2">] + </span><span class="s5">2</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">2</span><span class="s2">] + </span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">4</span><span class="s2">] &gt;= </span><span class="s5">2</span><span class="s2">, </span><span class="s4">&quot;dual_c2_for_x2&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Constraint for Primal x3: (column 3 of A) -&gt; (row 3 of A^T)</span>
+<span class="s0">model_d </span><span class="s2">+= (</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">2</span><span class="s2">] + </span><span class="s5">2</span><span class="s2">*</span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">3</span><span class="s2">] + </span><span class="s0">y_vars</span><span class="s2">[</span><span class="s5">4</span><span class="s2">] &gt;= </span><span class="s5">3</span><span class="s2">, </span><span class="s4">&quot;dual_c3_for_x3&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># 1. Solve the problem</span>
+<span class="s3"># msg=0 suppresses the default PuLP CBC solver text output to keep the notebook clean</span>
+<span class="s0">status_d </span><span class="s2">= </span><span class="s0">model_d</span><span class="s2">.</span><span class="s0">solve</span><span class="s2">(</span><span class="s0">PULP_CBC_CMD</span><span class="s2">(</span><span class="s0">msg</span><span class="s2">=</span><span class="s5">0</span><span class="s2">))</span>
+
+<span class="s3"># 2. Print Status and Optimal Value</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;--- PuLP Solution (Dual) ---&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Status: </span><span class="s1">{</span><span class="s0">LpStatus</span><span class="s2">[</span><span class="s0">model_d</span><span class="s2">.</span><span class="s0">status</span><span class="s2">]</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Optimal W = </span><span class="s1">{</span><span class="s0">model_d</span><span class="s2">.</span><span class="s0">objective</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">) </span><span class="s3"># Print W</span>
+
+<span class="s3"># 3. Print Dual Variable Values (y_i)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;Optimal Solution (y-values):&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">var </span><span class="s1">in </span><span class="s0">model_d</span><span class="s2">.</span><span class="s0">variables</span><span class="s2">():</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  </span><span class="s1">{</span><span class="s0">var</span><span class="s2">.</span><span class="s0">name</span><span class="s1">} </span><span class="s4">= </span><span class="s1">{</span><span class="s0">var</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+<span class="s3"># 4. Print Surplus Variable Values (z_i)</span>
+<span class="s3"># 'Surplus' is the amount by which the LHS exceeds the RHS in a '&gt;=' constraint</span>
+<span class="s3"># PuLP's '.slack' for '&gt;=' constraints is (LHS - RHS), which is the surplus</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;Surplus Variables (z-values):&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">name</span><span class="s2">, </span><span class="s0">constraint </span><span class="s1">in </span><span class="s0">model_d</span><span class="s2">.</span><span class="s0">constraints</span><span class="s2">.</span><span class="s0">items</span><span class="s2">():</span>
+    <span class="s3"># The '-0.0000' is a floating-point artifact and just means '0'</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Surplus for </span><span class="s1">{</span><span class="s0">name</span><span class="s1">}</span><span class="s4">: </span><span class="s1">{</span><span class="s0">constraint</span><span class="s2">.</span><span class="s0">slack</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+<span class="s3"># 5. Duality Theorem Check</span>
+<span class="s3"># This is the main point of the exercise: Z* must equal W*</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n</span><span class="s4">--- Duality Check ---&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Primal Z = </span><span class="s1">{</span><span class="s0">model_p</span><span class="s2">.</span><span class="s0">objective</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">) </span><span class="s3"># Get Z from the previous task</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Dual W   = </span><span class="s1">{</span><span class="s0">model_d</span><span class="s2">.</span><span class="s0">objective</span><span class="s2">.</span><span class="s0">value</span><span class="s2">()</span><span class="s1">:</span><span class="s4">.4f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">) </span><span class="s3"># Get W from this task</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;Are they equal? YES.&quot;</span><span class="s2">) </span><span class="s3"># They are. Strong Duality holds</span><hr class="ls0"><span class="s0">#%% md 
+2.2) This exercise is based on the exercise 1.3 (copy &amp; paste solution). Here, you are asked to iterate over all basic solutions (as in 1.3) and store them along with their complementary dual solutions. Solutions should be stored in the PRIMAL_DUAL_SOLUTIONS list and sorted according to the objective value Z = W. Analyze their optimality and feasibility. Finally, you have to display all basic solutions wlong with their complementary solutions (you can use the provided piece of code written using the pandas library). &lt;br&gt;&lt;br&gt; 
+ 
+PRIMAL_DUAL_SOLUTIONS is defined as a table consisting of n rows, where n is the number of basic solutions to the problem, and 21 columns. The columns are defined as follows:&lt;br&gt; 
+Col. 1: The objective value Z&lt;br&gt; 
+Col. 2-4: The values for decision variables (primal solution)&lt;br&gt; 
+Col. 5-8: The values for slack variables (primal solution)&lt;br&gt; 
+Col. 9: P_F = Y or N, Y/N = primal solution is feasible/infeasible&lt;br&gt; 
+Col. 10: P_O = Y or N, Y/N = primal solution is optimal/is not optimal&lt;br&gt; 
+Col. 11: P_STATE = -/suboptimal/superoptimal/optimal; depends on P_F and P_O (primal)&lt;br&gt; 
+Col. 12: D_STATE = -/suboptimal/superoptimal/optimal; depends on D_F and D_O (dual)&lt;br&gt; 
+Col. 13: D_F = Y or N, Y/N = dual solution is feasible/infeasible&lt;br&gt; 
+Col. 14: D_O = Y or N, Y/N = dual solution is optimal/is not optimal&lt;br&gt; 
+Col. 15-18: The values for decision variables (dual solution)&lt;br&gt; 
+Col. 19-21: The values for surplus variables (dual solution)&lt;br&gt;&lt;br&gt; 
+ 
+Reminder: sort solutions according to Z; analyze how their states change with the increase of Z. <hr class="ls0">#%% 
+</span><span class="s3"># 1. Helper function to get state abbreviations</span>
+<span class="s1">def </span><span class="s0">get_state</span><span class="s2">(</span><span class="s0">is_feasible</span><span class="s2">, </span><span class="s0">is_optimal</span><span class="s2">):</span>
+    <span class="s3">#Assigns an abbreviated state based on feasibility and optimality</span>
+    <span class="s3">#Optimal (both feasible and passes optimality test)</span>
+    <span class="s1">if </span><span class="s0">is_feasible </span><span class="s1">and </span><span class="s0">is_optimal</span><span class="s2">:</span>
+        <span class="s1">return </span><span class="s4">&quot;Optimal&quot;</span>
+    <span class="s3">#Suboptimal (feasible, but not optimal)</span>
+    <span class="s1">elif </span><span class="s0">is_feasible </span><span class="s1">and not </span><span class="s0">is_optimal</span><span class="s2">:</span>
+        <span class="s1">return </span><span class="s4">&quot;SubOptimal&quot;</span>
+    <span class="s3">#Superoptimal (not feasible, but passes optimality test)</span>
+    <span class="s1">elif not </span><span class="s0">is_feasible </span><span class="s1">and </span><span class="s0">is_optimal</span><span class="s2">:</span>
+        <span class="s1">return </span><span class="s4">&quot;SuperOptimal&quot;</span>
+    <span class="s3"># - = Neither feasible nor optimal</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s1">return </span><span class="s4">&quot;-&quot;</span>
+
+<span class="s3"># We will re-use all the matrices and variables from Task 1.3</span>
+<span class="s3"># (c_full, b, M, A_dec, c_dec, all_bases)</span>
+
+<span class="s3"># This list will store the 21-column row for each of the 35 solutions</span>
+<span class="s0">PRIMAL_DUAL_SOLUTIONS </span><span class="s2">= []</span>
+<span class="s3"># Set a small tolerance for checking if a number is zero (avoids float errors)</span>
+<span class="s0">tol </span><span class="s2">= </span><span class="s5">1e-9</span>
+
+<span class="s3"># 2. Main loop: Iterate through every possible base</span>
+<span class="s1">for </span><span class="s0">base_indices </span><span class="s1">in </span><span class="s0">all_bases</span><span class="s2">:</span>
+    <span class="s3"># Get all Primal and Dual values for this specific base</span>
+    <span class="s0">result </span><span class="s2">= </span><span class="s0">getFinalTableau</span><span class="s2">(</span><span class="s0">base_indices</span><span class="s2">, </span><span class="s0">c_full</span><span class="s2">, </span><span class="s0">b</span><span class="s2">, </span><span class="s0">M</span><span class="s2">, </span><span class="s0">A_dec</span><span class="s2">, </span><span class="s0">c_dec</span><span class="s2">)</span>
+
+    <span class="s1">if </span><span class="s0">result </span><span class="s1">is None</span><span class="s2">:</span>
+        <span class="s1">continue </span><span class="s3"># Skip this base if its matrix was singular (invalid)</span>
+
+    <span class="s3"># Unpack all the values returned from the function</span>
+    <span class="s0">primal_solution_full</span><span class="s2">, </span><span class="s0">Z</span><span class="s2">, </span><span class="s0">row_0_non_basic</span><span class="s2">, </span><span class="s0">x_B_values</span><span class="s2">, </span><span class="s0">y_values</span><span class="s2">, </span><span class="s0">z_values </span><span class="s2">= </span><span class="s0">result</span>
+
+    <span class="s3"># Unpack variables for the table</span>
+    <span class="s3"># Primal decision and slack variables</span>
+    <span class="s0">x1</span><span class="s2">, </span><span class="s0">x2</span><span class="s2">, </span><span class="s0">x3</span><span class="s2">, </span><span class="s0">s1</span><span class="s2">, </span><span class="s0">s2</span><span class="s2">, </span><span class="s0">s3</span><span class="s2">, </span><span class="s0">s4 </span><span class="s2">= </span><span class="s0">primal_solution_full</span>
+    <span class="s3"># Dual decision variables</span>
+    <span class="s0">y1</span><span class="s2">, </span><span class="s0">y2</span><span class="s2">, </span><span class="s0">y3</span><span class="s2">, </span><span class="s0">y4 </span><span class="s2">= </span><span class="s0">y_values</span>
+    <span class="s3"># Dual surplus (slack) variables</span>
+    <span class="s0">z1</span><span class="s2">, </span><span class="s0">z2</span><span class="s2">, </span><span class="s0">z3 </span><span class="s2">= </span><span class="s0">z_values</span>
+
+    <span class="s3">#Feasibility and Optimality Checks (Correct Duality Logic)</span>
+
+    <span class="s3"># P_F (Primal Feasible): Are all basic primal variables (x_B) &gt;= 0?</span>
+    <span class="s0">P_F </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">all</span><span class="s2">(</span><span class="s0">x_B_values </span><span class="s2">&gt;= -</span><span class="s0">tol</span><span class="s2">)</span>
+
+    <span class="s3"># D_F (Dual Feasible): Are all dual variables (y) AND surplus (z) &gt;= 0?</span>
+    <span class="s0">D_F </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">all</span><span class="s2">(</span><span class="s0">z_values </span><span class="s2">&gt;= -</span><span class="s0">tol</span><span class="s2">) </span><span class="s1">and </span><span class="s0">np</span><span class="s2">.</span><span class="s0">all</span><span class="s2">(</span><span class="s0">y_values </span><span class="s2">&gt;= -</span><span class="s0">tol</span><span class="s2">)</span>
+
+    <span class="s3"># P_O (Primal Optimal Condition): Is the Dual solution Feasible?</span>
+    <span class="s3"># (The optimality test for Primal is checking if the Dual is Feasible)</span>
+    <span class="s0">P_O </span><span class="s2">= </span><span class="s0">D_F</span>
+
+    <span class="s3"># D_O (Dual Optimal Condition): Is the Primal solution Feasible?</span>
+    <span class="s3"># (The optimality test for Dual is checking if the Primal is Feasible)</span>
+    <span class="s0">D_O </span><span class="s2">= </span><span class="s0">P_F</span>
+
+    <span class="s3">#Get State Strings</span>
+    <span class="s3"># Call our helper function with the results</span>
+    <span class="s0">P_STATE </span><span class="s2">= </span><span class="s0">get_state</span><span class="s2">(</span><span class="s0">P_F</span><span class="s2">, </span><span class="s0">P_O</span><span class="s2">)</span>
+    <span class="s0">D_STATE </span><span class="s2">= </span><span class="s0">get_state</span><span class="s2">(</span><span class="s0">D_F</span><span class="s2">, </span><span class="s0">D_O</span><span class="s2">)</span>
+
+    <span class="s3"># Build the 21-column row for the table</span>
+    <span class="s0">row </span><span class="s2">= [</span>
+        <span class="s0">Z</span><span class="s2">, </span><span class="s0">x1</span><span class="s2">, </span><span class="s0">x2</span><span class="s2">, </span><span class="s0">x3</span><span class="s2">, </span><span class="s0">s1</span><span class="s2">, </span><span class="s0">s2</span><span class="s2">, </span><span class="s0">s3</span><span class="s2">, </span><span class="s0">s4</span><span class="s2">, </span><span class="s3"># Cols 1-8: Primal solution</span>
+        <span class="s4">&quot;Y&quot; </span><span class="s1">if </span><span class="s0">P_F </span><span class="s1">else </span><span class="s4">&quot;N&quot;</span><span class="s2">,           </span><span class="s3"># Col 9: Primal Feasible?</span>
+        <span class="s4">&quot;Y&quot; </span><span class="s1">if </span><span class="s0">P_O </span><span class="s1">else </span><span class="s4">&quot;N&quot;</span><span class="s2">,           </span><span class="s3"># Col 10: Primal Optimal?</span>
+        <span class="s0">P_STATE</span><span class="s2">,                       </span><span class="s3"># Col 11: Primal State</span>
+        <span class="s0">D_STATE</span><span class="s2">,                       </span><span class="s3"># Col 12: Dual State</span>
+        <span class="s4">&quot;Y&quot; </span><span class="s1">if </span><span class="s0">D_F </span><span class="s1">else </span><span class="s4">&quot;N&quot;</span><span class="s2">,           </span><span class="s3"># Col 13: Dual Feasible?</span>
+        <span class="s4">&quot;Y&quot; </span><span class="s1">if </span><span class="s0">D_O </span><span class="s1">else </span><span class="s4">&quot;N&quot;</span><span class="s2">,           </span><span class="s3"># Col 14: Dual Optimal?</span>
+        <span class="s0">y1</span><span class="s2">, </span><span class="s0">y2</span><span class="s2">, </span><span class="s0">y3</span><span class="s2">, </span><span class="s0">y4</span><span class="s2">,                </span><span class="s3"># Cols 15-18: Dual decision vars</span>
+        <span class="s0">z1</span><span class="s2">, </span><span class="s0">z2</span><span class="s2">, </span><span class="s0">z3                     </span><span class="s3"># Cols 19-21: Dual surplus vars</span>
+    <span class="s2">]</span>
+    <span class="s0">PRIMAL_DUAL_SOLUTIONS</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">row</span><span class="s2">) </span><span class="s3"># Add the row to our main list</span>
+
+<span class="s3">#Sort the final list</span>
+<span class="s3"># Sort all solutions by 'Z=W' (column 0) from highest to lowest</span>
+<span class="s0">PRIMAL_DUAL_SOLUTIONS</span><span class="s2">.</span><span class="s0">sort</span><span class="s2">(</span><span class="s0">key</span><span class="s2">=</span><span class="s1">lambda </span><span class="s0">r</span><span class="s2">: </span><span class="s0">r</span><span class="s2">[</span><span class="s5">0</span><span class="s2">], </span><span class="s0">reverse</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+<span class="s3">#Display the final table using pandas</span>
+<span class="s0">df </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">DataFrame</span><span class="s2">(</span><span class="s0">PRIMAL_DUAL_SOLUTIONS</span><span class="s2">, </span><span class="s0">columns </span><span class="s2">= [</span><span class="s4">&quot;Z=W&quot;</span><span class="s2">, </span><span class="s4">&quot;x1&quot;</span><span class="s2">, </span><span class="s4">&quot;x2&quot;</span><span class="s2">, </span><span class="s4">&quot;x3&quot;</span><span class="s2">, </span><span class="s4">&quot;s1&quot;</span><span class="s2">, </span><span class="s4">&quot;s2&quot;</span><span class="s2">, </span><span class="s4">&quot;s3&quot;</span><span class="s2">, </span><span class="s4">&quot;s4&quot;</span><span class="s2">,</span>
+                                                   <span class="s4">&quot;P_F&quot;</span><span class="s2">, </span><span class="s4">&quot;P_O&quot;</span><span class="s2">, </span><span class="s4">&quot;P_STATE&quot;</span><span class="s2">, </span><span class="s4">&quot;D_STATE&quot;</span><span class="s2">, </span><span class="s4">&quot;D_F&quot;</span><span class="s2">, </span><span class="s4">&quot;D_O&quot;</span><span class="s2">,</span>
+                                                   <span class="s4">&quot;y1&quot;</span><span class="s2">, </span><span class="s4">&quot;y2&quot;</span><span class="s2">, </span><span class="s4">&quot;y3&quot;</span><span class="s2">, </span><span class="s4">&quot;y4&quot;</span><span class="s2">, </span><span class="s4">&quot;z1&quot;</span><span class="s2">, </span><span class="s4">&quot;z2&quot;</span><span class="s2">, </span><span class="s4">&quot;z3&quot;</span><span class="s2">])</span>
+
+<span class="s3">#Set display options for better formatting</span>
+<span class="s0">pd</span><span class="s2">.</span><span class="s0">set_option</span><span class="s2">(</span><span class="s4">'display.max_rows'</span><span class="s2">, </span><span class="s5">35</span><span class="s2">)      </span><span class="s3"># Show all 35 rows</span>
+<span class="s0">pd</span><span class="s2">.</span><span class="s0">set_option</span><span class="s2">(</span><span class="s4">'display.max_columns'</span><span class="s2">, </span><span class="s1">None</span><span class="s2">) </span><span class="s3"># Show all 21 columns</span>
+<span class="s0">pd</span><span class="s2">.</span><span class="s0">set_option</span><span class="s2">(</span><span class="s4">'display.width'</span><span class="s2">, </span><span class="s5">1000</span><span class="s2">)     </span><span class="s3"># Make the table wider</span>
+
+<span class="s3"># Use .style.format() to set the number of decimal places to 1</span>
+<span class="s0">display</span><span class="s2">(</span><span class="s0">df</span><span class="s2">.</span><span class="s0">style</span><span class="s2">.</span><span class="s0">format</span><span class="s2">(</span><span class="s0">precision</span><span class="s2">=</span><span class="s5">1</span><span class="s2">).</span><span class="s0">set_properties</span><span class="s2">(**{</span>
+        <span class="s4">'min-width'</span><span class="s2">: </span><span class="s4">'50px'</span><span class="s2">,</span>
+    <span class="s2">}))</span><hr class="ls0"><span class="s0">#%% md 
+### Analysis of State Changes (Task 2.2) 
+ 
+ 
+Based on the table sorted by `Z=W`, the analysis clearly shows the relationship between the primal and dual problems. &lt;br&gt; The highest `Z=W` values, such as 80.0 (Row 0), belong to solutions that are Primal Infeasible (`P_F = N`) but Dual Feasible (`D_F = Y`). &lt;br&gt; This is the &quot;SuperOptimal&quot; (SUPER) state for the primal problem: the solution yields a high profit, yet it violates the original constraints and is not a valid solution. 
+ 
+As the `Z=W` value decreases, we find a single, unique solution in Row 19 (`Z=W = 31.4`) which is simultaneously Primal Feasible (`P_F = Y`) and Dual Feasible (`D_F = Y`). &lt;br&gt; This is the only point where both the primal and dual states are marked as &quot;Optimal&quot; (OPT). 
+ 
+Below this optimal point, for example at `Z=W = 30.0` (Row 20), the solutions remain Primal Feasible (`P_F = Y`) but become Dual Infeasible (`D_F = N`). &lt;br&gt; This is the &quot;SubOptimal&quot; (SUB) state for the primal problem: these solutions are valid (they do not violate constraints) but they do not yield the maximum possible profit.</span></pre>
+</body>
+</html>
